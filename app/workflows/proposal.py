@@ -146,7 +146,7 @@ Generate 3-7 specific scope items for this project in {'English' if lang == 'en'
 
 
 def estimate_project(state: ProposalState) -> ProposalState:
-    """Step 3: Estimate project duration and price."""
+    """Step 3: Estimate project timeline and pricing based on brief analysis."""
     logger.info(f"Step 3: Estimating project for proposal {state['request'].proposal_id}")
     
     if state.get('error'):
@@ -154,25 +154,83 @@ def estimate_project(state: ProposalState) -> ProposalState:
     
     request = state['request']
     scope_count = len(state['scope'])
+    llm = llm_service.get_primary_model()
+    lang = request.language
     
-    # Estimation logic
-    duration_days = scope_count * 7  # 1 week per scope item
-    base_price = request.freelancer_profile.min_price
-    price = max(base_price, scope_count * 3500000)  # 3.5M IDR per scope item
+    # Use AI to estimate based on client budget and freelancer preferences
+    system_prompt = """You are an expert freelance project estimator.
+Analyze the client's brief and freelancer's profile to provide realistic timeline and pricing estimates.
+CRITICAL: Respect the client's stated budget constraints. If they mention a budget, stay within or slightly above it (max 20% over).
+Consider the freelancer's preferences for timeline and pricing."""
+
+    user_context = f"""
+Client Brief: {request.brief}
+Freelancer Timeline Preference: {request.user_brief if request.user_brief else "Standard timeline"}
+
+Scope Items: {', '.join(state['scope'])}
+Scope Count: {scope_count}
+
+Freelancer Profile:
+- Minimum Price: {request.freelancer_profile.currency} {request.freelancer_profile.min_price}
+- Rate Type: {request.freelancer_profile.rate_type}
+- Currency: {request.freelancer_profile.currency}
+
+Based on the above, provide:
+1. Realistic duration in days (consider freelancer's timeline preference)
+2. Fair price in {request.freelancer_profile.currency} (MUST respect client's budget if mentioned)
+
+Respond ONLY with JSON in this exact format:
+{{"duration_days": <number>, "price": <number>}}
+"""
     
-    state['estimation'] = ProposalEstimation(
-        duration_days=duration_days,
-        price=price
-    )
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_context)
+    ]
     
-    save_step(request.proposal_id, "03_estimation", {
-        "duration_days": duration_days,
-        "price": price,
-        "currency": request.freelancer_profile.currency,
-        "scope_count": scope_count
-    })
+    try:
+        response = llm.invoke(messages)
+        # Parse JSON response
+        import json
+        import re
+        
+        # Extract JSON from response
+        json_match = re.search(r'\{[^}]+\}', response.content)
+        if json_match:
+            estimation_data = json.loads(json_match.group())
+            duration_days = int(estimation_data['duration_days'])
+            price = int(estimation_data['price'])
+        else:
+            # Fallback to reasonable defaults
+            duration_days = min(scope_count * 5, 30)  # Max 30 days
+            price = request.freelancer_profile.min_price
+            logger.warning("Could not parse AI estimation, using fallback")
+        
+        state['estimation'] = ProposalEstimation(
+            duration_days=duration_days,
+            price=price
+        )
+        
+        save_step(request.proposal_id, "03_estimation", {
+            "duration_days": duration_days,
+            "price": price,
+            "currency": request.freelancer_profile.currency,
+            "scope_count": scope_count,
+            "ai_response": response.content
+        })
+        
+        logger.info(f"Estimated {duration_days} days, {price} {request.freelancer_profile.currency}")
+    except Exception as e:
+        logger.error(f"Error estimating project: {str(e)}")
+        # Fallback estimation
+        duration_days = min(scope_count * 5, 30)
+        price = request.freelancer_profile.min_price
+        state['estimation'] = ProposalEstimation(
+            duration_days=duration_days,
+            price=price
+        )
+        logger.warning(f"Using fallback estimation: {duration_days} days, {price}")
     
-    logger.info(f"Estimated {duration_days} days, {price} {request.freelancer_profile.currency}")
     return state
 
 
@@ -402,31 +460,14 @@ Generate a credentials section."""
 
 
 def generate_social_proof(state: ProposalState) -> ProposalState:
-    """Step 11: Generate social proof section."""
-    logger.info(f"Step 11: Generating social proof")
+    """Step 11: Skip social proof section (no fake testimonials)."""
+    logger.info(f"Step 11: Skipping social proof section")
     
     if state.get('error'):
         return state
     
-    request = state['request']
-    llm = llm_service.get_primary_model()
-    lang = request.language
-    config = LANGUAGE_CONFIGS[lang]
-    
-    system_prompt = get_social_proof_prompt(lang)
-    user_prompt = f"""
-{f"Background: {request.user_brief}" if request.user_brief else ""}
-
-Generate a social proof section with example testimonials."""
-    
-    try:
-        response = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
-        content = clean_html(response.content)
-        state['sections']['social_proof'] = content
-        save_step(request.proposal_id, "11_social_proof", {"content": content, "language": lang})
-    except Exception as e:
-        logger.error(f"Error generating social proof: {str(e)}")
-        state['sections']['social_proof'] = f"<h3>{config['social_proof_title']}</h3><p>Proven track record.</p>"
+    # Skip this section - no fake testimonials
+    state['sections']['social_proof'] = ''
     
     return state
 
@@ -493,9 +534,43 @@ def assemble_proposal(state: ProposalState) -> ProposalState:
 
 
 def clean_html(content: str) -> str:
-    """Clean HTML content by removing markdown code blocks."""
+    """Clean HTML content - remove markdown code blocks and non-HTML preamble text."""
+    # Remove markdown code fences
     content = re.sub(r'```html\n?', '', content)
     content = re.sub(r'```\n?', '', content)
+    content = content.strip()
+    
+    # Find the first HTML tag and strip any preamble text before it
+    first_tag = re.search(r'<(h[1-6]|p|ul|ol|div|section|article|blockquote|table|strong|em|a|span|br)', content, re.IGNORECASE)
+    if first_tag:
+        preamble = content[:first_tag.start()].strip()
+        html_content = content[first_tag.start():]
+        
+        # If preamble looks like conversational filler, discard it
+        # Otherwise, wrap it in a <p> tag if it seems substantial
+        conversational_markers = ['here is', 'here\'s', 'sure', 'certainly', 'below is', 'following is', 'output:', 'html:', 'berikut', 'adalah', 'ini']
+        is_conversational = any(marker in preamble.lower() for marker in conversational_markers)
+        
+        if preamble and len(preamble) > 3 and not is_conversational:
+            # Only keep preamble if it DOESN'T look like AI chatter
+            content = f"<p>{preamble}</p>\n{html_content}"
+        else:
+            # Discard preamble (it's either empty, too short, or conversational)
+            content = html_content
+    else:
+        # No HTML tags found at all - wrap entire content in paragraphs
+        lines = content.split('\n')
+        wrapped = []
+        for line in lines:
+            line = line.strip()
+            if line:
+                wrapped.append(f"<p>{line}</p>")
+        content = '\n'.join(wrapped)
+    
+    # Clean up any remaining plain text between HTML blocks
+    # Split by HTML tags and wrap orphaned text
+    content = re.sub(r'(?<=>)\s*\n\s*([^<\n]+)\s*\n\s*(?=<)', lambda m: f'\n<p>{m.group(1).strip()}</p>\n', content)
+    
     return content.strip()
 
 

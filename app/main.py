@@ -1,10 +1,11 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.models import ProposalRequest, ProposalResponse, ProposalEstimation
 from app.workflows.proposal import proposal_workflow, ProposalState
-from app.services.callback import send_callback
+from app.services.callback import send_callback_sync
 from app.config import get_settings
 import logging
+import threading
 
 # Configure logging
 logging.basicConfig(
@@ -32,14 +33,14 @@ app.add_middleware(
 )
 
 
-async def process_proposal(request: ProposalRequest):
+def process_proposal_sync(request: ProposalRequest):
     """
-    Background task to process proposal generation and send callback.
+    Background task (Thread) to process proposal generation and send callback.
     
     Args:
         request: The proposal generation request
     """
-    logger.info(f"Processing proposal {request.proposal_id}")
+    logger.info(f"Processing proposal {request.proposal_id} in background thread")
     
     try:
         # Initialize workflow state
@@ -52,7 +53,7 @@ async def process_proposal(request: ProposalRequest):
             "error": None
         }
         
-        # Run the workflow
+        # Run the workflow (Synchronous)
         final_state = proposal_workflow.invoke(initial_state)
         
         # Prepare response
@@ -78,8 +79,8 @@ async def process_proposal(request: ProposalRequest):
                 content=final_state['proposal_html']
             )
         
-        # Send callback to Laravel
-        await send_callback(response)
+        # Send callback to Laravel (Synchronous)
+        send_callback_sync(response)
         logger.info(f"Proposal {request.proposal_id} processing completed")
         
     except Exception as e:
@@ -95,7 +96,7 @@ async def process_proposal(request: ProposalRequest):
             content="",
             error=str(e)
         )
-        await send_callback(error_response)
+        send_callback_sync(error_response)
 
 
 @app.get("/")
@@ -109,26 +110,27 @@ async def root():
 
 
 @app.post("/api/generate-proposal")
-async def generate_proposal(request: ProposalRequest, background_tasks: BackgroundTasks):
+async def generate_proposal(request: ProposalRequest):
     """
     Endpoint to receive proposal generation requests from Laravel.
+    Starts processing in a background thread and returns immediately.
     
     Args:
         request: The proposal request payload
-        background_tasks: FastAPI background tasks
         
     Returns:
         dict: Acknowledgment response
     """
     logger.info(f"Received proposal request {request.proposal_id}")
     
-    # Add background task
-    background_tasks.add_task(process_proposal, request)
+    # Start processing in a separate thread to allow immediate response
+    thread = threading.Thread(target=process_proposal_sync, args=(request,))
+    thread.start()
     
     return {
         "status": "accepted",
         "proposal_id": request.proposal_id,
-        "message": "Proposal generation started"
+        "message": "Proposal generation started in background"
     }
 
 
