@@ -13,6 +13,7 @@ from app.prompts import (
     get_credentials_prompt,
     get_social_proof_prompt,
     get_terms_prompt,
+    get_title_prompt,
     LANGUAGE_CONFIGS
 )
 import logging
@@ -31,6 +32,7 @@ class ProposalState(TypedDict):
     sections: Dict[str, str]  # Store each generated section
     scope: List[str]
     estimation: ProposalEstimation
+    title: str
     proposal_html: str
     error: str | None
 
@@ -48,6 +50,33 @@ def save_step(proposal_id: int, step_name: str, data: Any):
         logger.info(f"Saved step '{step_name}' for proposal {proposal_id}")
     except Exception as e:
         logger.error(f"Failed to save step '{step_name}': {str(e)}")
+
+
+def generate_title(state: ProposalState) -> ProposalState:
+    """Step 1.5: Generate proposal title."""
+    logger.info(f"Step 1.5: Generating title")
+    
+    if state.get('error'):
+        return state
+    
+    request = state['request']
+    llm = llm_service.get_primary_model()
+    lang = request.language
+    
+    system_prompt = get_title_prompt(lang)
+    user_prompt = f"Brief Analysis: {state['brief_analysis']}"
+    
+    try:
+        response = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
+        title = response.content.strip().replace('"', '')
+        state['title'] = title
+        save_step(request.proposal_id, "01_title", {"title": title, "language": lang})
+        logger.info(f"Generated title: {title}")
+    except Exception as e:
+        logger.error(f"Error generating title: {str(e)}")
+        state['title'] = "Proposal Proyek" if lang == "id" else "Project Proposal"
+    
+    return state
 
 
 def analyze_brief(state: ProposalState) -> ProposalState:
@@ -597,7 +626,9 @@ def create_proposal_workflow() -> StateGraph:
     
     # Define edges (sequential flow)
     workflow.set_entry_point("analyze_brief")
-    workflow.add_edge("analyze_brief", "generate_scope")
+    workflow.add_node("generate_title", generate_title)
+    workflow.add_edge("analyze_brief", "generate_title")
+    workflow.add_edge("generate_title", "generate_scope")
     workflow.add_edge("generate_scope", "estimate_project")
     workflow.add_edge("estimate_project", "init_sections")
     workflow.add_edge("init_sections", "generate_introduction")

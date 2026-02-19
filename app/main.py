@@ -49,6 +49,7 @@ def process_proposal_sync(request: ProposalRequest):
             "brief_analysis": "",
             "scope": [],
             "estimation": ProposalEstimation(duration_days=0, price=0),
+            "title": "",
             "proposal_html": "",
             "error": None
         }
@@ -76,7 +77,8 @@ def process_proposal_sync(request: ProposalRequest):
                 summary="Klien membutuhkan pengembangan software/website dengan fitur spesifik.",
                 scope=final_state['scope'],
                 estimation=final_state['estimation'],
-                content=final_state['proposal_html']
+                content=final_state['proposal_html'],
+                title=final_state.get('title', 'Proposal Proyek')
             )
         
         # Send callback to Laravel (Synchronous)

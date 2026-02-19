@@ -40,5 +40,6 @@ class ProposalResponse(BaseModel):
     summary: str
     scope: List[str]
     estimation: ProposalEstimation
+    title: str = Field(default="Proposal Proyek")
     content: str  # HTML content
     error: Optional[str] = None

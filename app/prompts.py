@@ -83,6 +83,32 @@ Panduan:
 Tulis HANYA bagian pemahaman kebutuhan dalam format HTML menggunakan <h3> untuk judul dan <p> atau <ul> untuk konten."""
 
 
+def get_title_prompt(language: str = "id") -> str:
+    """Generate prompt for proposal title."""
+    if language == "en":
+        return """Create a professional, compelling title for this proposal based on the project requirements.
+        
+Guidelines:
+- Keep it short and concise (3-6 words)
+- Focus on the main solution or benefit
+- Professional tone
+- Do NOT use "Proposal for" or similar generic prefixes
+- Example: "E-Commerce Platform Development" or "High-Performance Mobile App Solution"
+
+Return ONLY the title text, nothing else."""
+    else:  # Indonesian
+        return """Buat judul yang profesional dan menarik untuk proposal ini berdasarkan kebutuhan proyek.
+
+Panduan:
+- Buat singkat dan padat (3-6 kata)
+- Fokus pada solusi atau manfaat utama
+- Nada profesional
+- JANGAN gunakan "Proposal untuk" atau awalan umum serupa
+- Contoh: "Pengembangan Website E-Commerce" atau "Solusi Aplikasi Mobile Performa Tinggi"
+
+Kembalikan HANYA teks judulnya saja, tidak ada yang lain."""
+
+
 def get_approach_prompt(language: str = "id") -> str:
     """Generate prompt for proposed approach section."""
     if language == "en":
@@ -107,8 +133,9 @@ Panduan:
 - Tunjukkan metodologi pemecahan masalah Anda
 - Sebutkan 3-5 langkah atau fase utama
 - Fokus pada nilai, bukan hanya tugas
+- **JANGAN** gunakan ikon, emoji, atau karakter khusus
 
-Tulis HANYA bagian pendekatan dalam format HTML menggunakan <h3> untuk judul dan <p> atau <ol> untuk konten."""
+Tulis HANYA bagian pendekatan dalam format HTML menggunakan <h3> untuk judul dan <ol> dengan <li> untuk poin-poin langkah. Jaga agar tetap bersih dan profesional."""
 
 
 def get_strengths_prompt(language: str = "id") -> str:
@@ -121,20 +148,23 @@ Guidelines:
 - Highlight 4-6 key strengths relevant to web development
 - Include: technical expertise, problem-solving, communication, track record
 - Be specific but concise
-- Focus on client benefits, not just your skills
+- Focus on client benefits
+- Keep it concise and persuasive
+- **DO NOT** use any icons, emojis, or special characters (like checkmarks)
 
-Write ONLY the strengths section in HTML format using <h3> for title and <ul><li> for the list."""
+Write ONLY the strengths section in HTML format using <h3> for title and <ul> with <li> for the list of benefits. Keep it clean and professional."""
     else:  # Indonesian
         return """Anda menulis bagian keunggulan/manfaat untuk proposal profesional.
 
 Panduan:
-- Gunakan format daftar poin untuk kemudahan membaca
-- Sorot 4-6 keunggulan utama yang relevan dengan pengembangan web
-- Sertakan: keahlian teknis, pemecahan masalah, komunikasi, track record
-- Spesifik namun ringkas
-- Fokus pada manfaat untuk klien, bukan hanya skill Anda
+- Soroti 3-4 nilai jual unik (USP) Anda
+- Hubungkan keterampilan Anda dengan tujuan klien
+- Tunjukkan mengapa Anda adalah kandidat terbaik
+- Fokus pada manfaat bagi klien
+- Buat ringkas dan persuasif
+- **JANGAN** gunakan ikon, emoji, atau karakter khusus (seperti tanda centang)
 
-Tulis HANYA bagian keunggulan dalam format HTML menggunakan <h3> untuk judul dan <ul><li> untuk daftar."""
+Tulis HANYA bagian keunggulan dalam format HTML menggunakan <h3> untuk judul dan <ul> dengan <li> untuk daftar manfaat. Jaga agar tetap bersih dan profesional."""
 
 
 def get_timeline_prompt(language: str = "id") -> str:
@@ -150,7 +180,7 @@ Guidelines:
 - Set clear expectations
 - Adjust based on project complexity
 
-Write ONLY the timeline section in HTML format using <h3> for title and <p> for content."""
+Write ONLY the timeline section in HTML format using <h3> for title and <ul> with <li> for the timeline items. Avoid long paragraphs."""
     else:  # Indonesian
         return """Anda menulis bagian timeline untuk proposal profesional.
 
@@ -162,7 +192,7 @@ Panduan:
 - Tetapkan ekspektasi yang jelas
 - Sesuaikan berdasarkan kompleksitas proyek
 
-Tulis HANYA bagian timeline dalam format HTML menggunakan <h3> untuk judul dan <p> untuk konten."""
+Tulis HANYA bagian timeline dalam format HTML menggunakan <h3> untuk judul dan <ul> dengan <li> untuk poin-poin timeline. Hindari paragraf panjang."""
 
 
 def get_pricing_prompt(language: str = "id") -> str:
@@ -177,8 +207,9 @@ Guidelines:
 - Frame as an investment, not just a cost
 - Be transparent and professional
 - Include what's covered in the price
+- **DO NOT** use any icons, emojis, or special characters (like checkmarks)
 
-Write ONLY the pricing section in HTML format using <h3> for title and <p> for content."""
+Write ONLY the pricing section in HTML format using <h3> for title and <ul> with <li> for the list of inclusions. Keep it clean and professional."""
     else:  # Indonesian
         return """Anda menulis bagian harga untuk proposal profesional.
 
@@ -189,8 +220,9 @@ Panduan:
 - Posisikan sebagai investasi, bukan hanya biaya
 - Transparan dan profesional
 - Sertakan apa yang termasuk dalam harga
+- **JANGAN** gunakan ikon, emoji, atau karakter khusus (seperti tanda centang)
 
-Tulis HANYA bagian harga dalam format HTML menggunakan <h3> untuk judul dan <p> untuk konten."""
+Tulis HANYA bagian harga dalam format HTML menggunakan <h3> untuk judul dan <ul> dengan <li> untuk daftar yang termasuk. Jaga agar tetap bersih dan profesional."""
 
 
 def get_credentials_prompt(language: str = "id") -> str:
