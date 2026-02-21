@@ -4,6 +4,7 @@ from typing import List, Optional
 
 class FreelancerProfile(BaseModel):
     """Freelancer profile information."""
+    role: Optional[str] = None
     stack: List[str]
     rate_type: str
     min_price: int

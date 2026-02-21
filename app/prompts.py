@@ -145,7 +145,7 @@ def get_strengths_prompt(language: str = "id") -> str:
 
 Guidelines:
 - Use a bulleted list format for scannability
-- Highlight 4-6 key strengths relevant to web development
+- Highlight 4-6 key strengths relevant to your field/expertise
 - Include: technical expertise, problem-solving, communication, track record
 - Be specific but concise
 - Focus on client benefits
@@ -233,7 +233,7 @@ def get_credentials_prompt(language: str = "id") -> str:
 Guidelines:
 - List relevant software, platforms, or certifications
 - Focus on tools mentioned in the job description
-- Include commonly used web development tools
+- Include commonly used industry-standard tools
 - Keep it scannable with bullet points
 - Show capability without overwhelming
 
@@ -244,7 +244,7 @@ Write ONLY the credentials section in HTML format using <h3> for title and <ul><
 Panduan:
 - Daftar software, platform, atau sertifikasi yang relevan
 - Fokus pada tools yang disebutkan dalam deskripsi pekerjaan
-- Sertakan tools pengembangan web yang umum digunakan
+- Sertakan tools industri yang umum digunakan
 - Buat mudah dibaca dengan poin-poin
 - Tunjukkan kemampuan tanpa berlebihan
 

@@ -97,6 +97,7 @@ Client Brief: {request.brief}
 {f"Freelancer Context: {request.user_brief}" if request.user_brief else ""}
 
 Freelancer Profile:
+- Role: {request.freelancer_profile.role or 'Freelancer'}
 - Tech Stack: {', '.join(request.freelancer_profile.stack)}
 - Rate Type: {request.freelancer_profile.rate_type}
 - Minimum Price: {request.freelancer_profile.currency} {request.freelancer_profile.min_price}
@@ -286,6 +287,7 @@ def generate_introduction(state: ProposalState) -> ProposalState:
 Brief Analysis: {state['brief_analysis']}
 
 Freelancer Profile:
+- Role: {request.freelancer_profile.role or 'Freelancer'}
 - Tech Stack: {', '.join(request.freelancer_profile.stack)}
 {f"- Background: {request.user_brief}" if request.user_brief else ""}
 
@@ -379,6 +381,7 @@ def generate_strengths(state: ProposalState) -> ProposalState:
     
     system_prompt = get_strengths_prompt(lang)
     user_prompt = f"""
+Role: {request.freelancer_profile.role or 'Freelancer'}
 Tech Stack: {', '.join(request.freelancer_profile.stack)}
 {f"Background: {request.user_brief}" if request.user_brief else ""}
 
@@ -472,6 +475,7 @@ def generate_credentials(state: ProposalState) -> ProposalState:
     
     system_prompt = get_credentials_prompt(lang)
     user_prompt = f"""
+Role: {request.freelancer_profile.role or 'Freelancer'}
 Tech Stack: {', '.join(request.freelancer_profile.stack)}
 
 Generate a credentials section."""
@@ -514,7 +518,7 @@ def generate_terms(state: ProposalState) -> ProposalState:
     config = LANGUAGE_CONFIGS[lang]
     
     system_prompt = get_terms_prompt(lang)
-    user_prompt = "Generate a professional terms and expectations section."
+    user_prompt = "Generate a professional terms and expectations section." if lang == 'en' else "Buat bagian syarat dan ekspektasi yang profesional."
     
     try:
         response = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
